@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sealed Ecosphere Simulator — Photosynthesis &amp; Cellular Respiration</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+    }
+    .font-mono-num {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Rising labeled gas bubbles (O2 and CO2) */
+    @keyframes riseBubble {
+      0% {
+        transform: translateY(0px) scale(0.85);
+        opacity: 0;
+      }
+      15% {
+        opacity: 0.95;
+      }
+      85% {
+        opacity: 0.95;
+      }
+      100% {
+        transform: translateY(-92px) scale(1.05);
+        opacity: 0;
+      }
+    }
+    .bubble-rise {
+      animation: riseBubble 2.8s infinite ease-in-out;
+    }
+
+    /* Gentle aquatic plant sway */
+    @keyframes swayPlant {
+      0%, 100% { transform: rotate(-1.5deg); }
+      50% { transform: rotate(1.5deg); }
+    }
+    .plant-sway {
+      transform-origin: 50% 100%;
+      animation: swayPlant 4s infinite ease-in-out;
+    }
+
+    /* Swimming fish animations */
+    @keyframes swimRight {
+      0%, 100% { transform: translate(0px, 0px) scaleX(1); }
+      25% { transform: translate(18px, -5px) scaleX(1); }
+      48% { transform: translate(34px, 3px) scaleX(1); }
+      50% { transform: translate(34px, 3px) scaleX(-1); }
+      75% { transform: translate(16px, -4px) scaleX(-1); }
+      98% { transform: translate(0px, 0px) scaleX(-1); }
+    }
+    @keyframes swimLeft {
+      0%, 100% { transform: translate(0px, 0px) scaleX(-1); }
+      25% { transform: translate(-18px, 4px) scaleX(-1); }
+      48% { transform: translate(-34px, -4px) scaleX(-1); }
+      50% { transform: translate(-34px, -4px) scaleX(1); }
+      75% { transform: translate(-16px, 4px) scaleX(1); }
+      98% { transform: translate(0px, 0px) scaleX(1); }
+    }
+    .fish-a {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: swimRight 7s infinite ease-in-out;
+    }
+    .fish-b {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: swimLeft 8s infinite ease-in-out;
+    }
+    .fish-slow {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: swimRight 14s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Minimalist Top Header -->
+  <header class="bg-white border-b border-slate-200 px-4 sm:px-6 py-2.5 shadow-sm">
+    <div class="max-w-[1440px] mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-extrabold text-sm shadow-sm">
+          BIO
+        </div>
+        <h1 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
+          Sealed Ecosphere Simulator: Photosynthesis &amp; Cellular Respiration
+        </h1>
+      </div>
+
+      <!-- Unobtrusive Natural Bio-Variation Badge -->
+      <div class="flex items-center gap-2 bg-slate-100 border border-slate-200 px-3 py-1 rounded-full text-xs font-semibold text-slate-700">
+        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        <span id="bioVariationBadge">Natural Bio-Variation Active — Trial #1</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main 3-Column Workspace -->
+  <main class="flex-1 max-w-[1440px] w-full mx-auto p-3 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+
+    <!-- =======================================================================
+         1. LEFT SIDEBAR — SIMPLE SETUP CONTROLS (3 cols on lg)
+         ======================================================================= -->
+    <section class="lg:col-span-3 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-4">
+      <h2 class="text-sm font-extrabold uppercase tracking-wider text-slate-500 border-b border-slate-100 pb-2">
+        1. Ecosphere Setup
+      </h2>
+
+      <!-- Aquatic Plants Selector (0 to 5) -->
+      <div id="plantSetupCard" class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 transition-colors">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-sm font-bold text-slate-900">Aquatic Plants</span>
+              <span id="plantDeadBadge" class="hidden px-1.5 py-0.5 rounded bg-rose-600 text-white text-[10px] font-extrabold uppercase tracking-wider">Dead</span>
+            </div>
+            <div class="text-xs text-slate-500">0 to 5 plants</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="changePlants(-1)" aria-label="Remove plant"
+              class="w-10 h-10 rounded-xl bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-900 font-extrabold text-xl border border-slate-300 shadow-sm transition flex items-center justify-center select-none">
+              &minus;
+            </button>
+            <span id="plantCountLabel" class="w-7 text-center font-mono-num text-xl font-extrabold text-emerald-700">3</span>
+            <button onclick="changePlants(1)" aria-label="Add plant"
+              class="w-10 h-10 rounded-xl bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-900 font-extrabold text-xl border border-slate-300 shadow-sm transition flex items-center justify-center select-none">
+              +
+            </button>
+          </div>
+        </div>
+        <!-- Visual Plant Icon Preview Row -->
+        <div id="plantIconPreview" class="flex items-center gap-1.5 min-h-[32px] pt-1"></div>
+      </div>
+
+      <!-- Fish Selector (0 to 4) -->
+      <div id="fishSetupCard" class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 transition-colors">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-sm font-bold text-slate-900">Aquatic Fish</span>
+              <span id="fishDeadBadge" class="hidden px-1.5 py-0.5 rounded bg-rose-600 text-white text-[10px] font-extrabold uppercase tracking-wider">Dead</span>
+            </div>
+            <div class="text-xs text-slate-500">0 to 4 fish</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="changeFish(-1)" aria-label="Remove fish"
+              class="w-10 h-10 rounded-xl bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-900 font-extrabold text-xl border border-slate-300 shadow-sm transition flex items-center justify-center select-none">
+              &minus;
+            </button>
+            <span id="fishCountLabel" class="w-7 text-center font-mono-num text-xl font-extrabold text-amber-600">1</span>
+            <button onclick="changeFish(1)" aria-label="Add fish"
+              class="w-10 h-10 rounded-xl bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-900 font-extrabold text-xl border border-slate-300 shadow-sm transition flex items-center justify-center select-none">
+              +
+            </button>
+          </div>
+        </div>
+        <!-- Visual Fish Icon Preview Row -->
+        <div id="fishIconPreview" class="flex items-center gap-1.5 min-h-[32px] pt-1"></div>
+      </div>
+
+      <!-- Lighting Mode Selector (3 Large Radio Buttons) -->
+      <div class="space-y-2 pt-1">
+        <div class="text-sm font-bold text-slate-900">2. Lighting Mode</div>
+        <div class="grid grid-cols-1 gap-2">
+          <button id="lightBtnAlwaysLight" onclick="setLightMode('always_light')"
+            class="w-full p-3 rounded-xl border-2 text-left transition flex items-center gap-3 bg-amber-50 border-amber-500 text-slate-900 shadow-sm">
+            <span class="text-xl shrink-0">☀️</span>
+            <div>
+              <div class="text-xs sm:text-sm font-bold leading-tight">Always Light</div>
+              <div class="text-[11px] text-slate-600">24h grow lamp stays ON</div>
+            </div>
+          </button>
+
+          <button id="lightBtnAlwaysDark" onclick="setLightMode('always_dark')"
+            class="w-full p-3 rounded-xl border-2 text-left transition flex items-center gap-3 bg-white border-slate-200 text-slate-700 hover:bg-slate-50">
+            <span class="text-xl shrink-0">🌑</span>
+            <div>
+              <div class="text-xs sm:text-sm font-bold leading-tight">Always Dark</div>
+              <div class="text-[11px] text-slate-500">Covered in foil (no light)</div>
+            </div>
+          </button>
+
+          <button id="lightBtnCycle" onclick="setLightMode('cycle')"
+            class="w-full p-3 rounded-xl border-2 text-left transition flex items-center gap-3 bg-white border-slate-200 text-slate-700 hover:bg-slate-50">
+            <span class="text-xl shrink-0">🌗</span>
+            <div>
+              <div class="text-xs sm:text-sm font-bold leading-tight">Day / Night Cycle</div>
+              <div class="text-[11px] text-slate-500">12 hrs Light / 12 hrs Dark</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Simulation Controls -->
+      <div class="pt-2 border-t border-slate-200 space-y-2.5">
+        <!-- Primary Start / Pause Button -->
+        <button id="startPauseBtn" onclick="toggleSimulation()"
+          class="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-extrabold text-base shadow-md transition flex items-center justify-center gap-2">
+          <span id="startPauseLabel">▶ Start Trial</span>
+        </button>
+
+        <div class="grid grid-cols-2 gap-2">
+          <!-- Secondary Reset / New Trial Button -->
+          <button onclick="startNewTrialReset()"
+            class="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs sm:text-sm border border-slate-300 transition">
+            ↻ Reset / New Trial
+          </button>
+
+          <!-- Speed Toggle: 1x | 3x -->
+          <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-300">
+            <button id="speed1Btn" onclick="setSpeed(1)"
+              class="flex-1 py-1.5 rounded-lg font-extrabold text-xs sm:text-sm bg-white text-slate-900 shadow-sm transition">
+              1x
+            </button>
+            <button id="speed3Btn" onclick="setSpeed(3)"
+              class="flex-1 py-1.5 rounded-lg font-extrabold text-xs sm:text-sm text-slate-600 hover:text-slate-900 transition">
+              3x
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =======================================================================
+         2. CENTER PANEL — VISUAL ECOSPHERE & PROCESS STATUS (4 cols on lg)
+         ======================================================================= -->
+    <section class="lg:col-span-4 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between space-y-3">
+      <!-- Top Bar: Clock & Current Light Status -->
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500">Elapsed Time:</span>
+          <span id="clockDisplay" class="font-mono-num text-lg font-extrabold text-slate-900 bg-slate-100 px-3 py-1 rounded-lg border border-slate-200">
+            Hour 0 / 48
+          </span>
+        </div>
+        <span id="lightingBadge" class="px-3 py-1 rounded-lg text-xs font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
+          ☀️ LIGHT ON
+        </span>
+      </div>
+
+      <!-- Trial Outcome Banner (Appears when trial finishes or crashes) -->
+      <div id="outcomeBanner" class="hidden rounded-xl p-3 border-2 text-sm font-bold text-center shadow-sm"></div>
+
+      <!-- Visual Sealed Bio-Dome SVG -->
+      <div class="relative w-full h-72 sm:h-80 rounded-2xl overflow-hidden border-2 border-slate-300 bg-sky-100 flex items-center justify-center">
+        <svg id="ecosphereSvg" viewBox="0 0 460 310" class="w-full h-full select-none">
+          <defs>
+            <!-- Day & Night Sky Gradients -->
+            <linearGradient id="daySky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#bae6fd" />
+              <stop offset="100%" stop-color="#e0f2fe" />
+            </linearGradient>
+            <linearGradient id="nightSky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#0f172a" />
+              <stop offset="100%" stop-color="#1e293b" />
+            </linearGradient>
+            <!-- Day & Night Water Gradients -->
+            <linearGradient id="dayWater" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.45" />
+              <stop offset="100%" stop-color="#0284c7" stop-opacity="0.75" />
+            </linearGradient>
+            <linearGradient id="nightWater" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#1e3a8a" stop-opacity="0.65" />
+              <stop offset="100%" stop-color="#0f172a" stop-opacity="0.92" />
+            </linearGradient>
+            <!-- Sun Rays Gradient -->
+            <linearGradient id="sunRays" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#fde047" stop-opacity="0.55" />
+              <stop offset="100%" stop-color="#fde047" stop-opacity="0.0" />
+            </linearGradient>
+          </defs>
+
+          <!-- Sky Background -->
+          <rect id="domeSkyRect" x="0" y="0" width="460" height="310" fill="url(#daySky)" />
+
+          <!-- Night Stars & Moon (Visible in Dark) -->
+          <g id="domeNightStars" opacity="0">
+            <circle cx="70" cy="42" r="1.8" fill="#f8fafc" />
+            <circle cx="135" cy="26" r="1.4" fill="#cbd5e1" />
+            <circle cx="330" cy="30" r="1.8" fill="#f8fafc" />
+            <circle cx="395" cy="52" r="1.5" fill="#cbd5e1" />
+            <path d="M365,30 A14,14 0 1,0 380,48 A11,11 0 1,1 365,30 Z" fill="#fef08a" />
+          </g>
+
+          <!-- Sun & Light Rays (Visible in Light) -->
+          <g id="domeSunGroup" opacity="1">
+            <polygon points="150,22 310,22 395,280 65,280" fill="url(#sunRays)" />
+            <circle cx="82" cy="46" r="22" fill="#facc15" stroke="#eab308" stroke-width="3" />
+          </g>
+
+          <!-- Sealed Top Stopper & Neck -->
+          <rect x="204" y="18" width="52" height="22" rx="4" fill="#475569" stroke="#334155" stroke-width="2" />
+          <rect x="196" y="10" width="68" height="10" rx="4" fill="#334155" />
+          <text x="230" y="29" fill="#f8fafc" font-size="8.5" font-weight="bold" text-anchor="middle">SEALED</text>
+
+          <!-- Water Inside Sealed Bio-Dome -->
+          <path id="domeWaterPath"
+            d="M54,102 L406,102 C416,162 416,232 396,272 L64,272 C44,232 44,162 54,102 Z"
+            fill="url(#dayWater)" />
+
+          <!-- Water Surface Line -->
+          <ellipse cx="230" cy="102" rx="176" ry="6" fill="#bae6fd" fill-opacity="0.55" stroke="#38bdf8" stroke-width="1.5" />
+
+          <!-- Dynamic Plants Group -->
+          <g id="domePlantsGroup"></g>
+
+          <!-- Dynamic Swimming Fish Group -->
+          <g id="domeFishGroup"></g>
+
+          <!-- Dynamic Labeled Gas Bubbles Group (O2 & CO2) -->
+          <g id="domeBubblesGroup"></g>
+
+          <!-- Gravel Bed at Bottom -->
+          <path d="M60,265 Q230,257 400,265 L394,284 Q230,290 66,284 Z" fill="#64748b" stroke="#475569" stroke-width="2" />
+          <g fill="#94a3b8">
+            <ellipse cx="115" cy="274" rx="14" ry="4" />
+            <ellipse cx="185" cy="277" rx="18" ry="4" />
+            <ellipse cx="255" cy="273" rx="15" ry="4" />
+            <ellipse cx="330" cy="276" rx="16" ry="4" />
+          </g>
+
+          <!-- Glass Bio-Dome Outline -->
+          <path d="M64,280 C32,218 38,56 204,36 L256,36 C422,56 428,218 396,280 Z"
+            fill="none" stroke="#475569" stroke-width="5" />
+          <!-- Glass Highlight -->
+          <path d="M78,242 C58,188 66,82 190,50"
+            fill="none" stroke="#ffffff" stroke-width="3.5" stroke-opacity="0.5" stroke-linecap="round" />
+
+          <!-- Always Dark Cover Label (Visible when Always Dark is selected) -->
+          <g id="alwaysDarkCoverBadge" opacity="0">
+            <rect x="135" y="48" width="190" height="24" rx="6" fill="#0f172a" stroke="#94a3b8" stroke-width="1.5" />
+            <text x="230" y="64" fill="#f8fafc" font-size="11" font-weight="bold" text-anchor="middle">24h DARK FOIL COVER</text>
+          </g>
+        </svg>
+
+        <!-- Simple Bubble Key at Bottom of Dome -->
+        <div class="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-center gap-3 pointer-events-none">
+          <div class="bg-white/95 border border-slate-300 px-3 py-1 rounded-full shadow-sm flex items-center gap-4 text-xs font-bold text-slate-800">
+            <span class="flex items-center gap-1.5">
+              <span class="w-3.5 h-3.5 rounded-full bg-blue-600 inline-block"></span>
+              O2 Bubble (Made in Light)
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="w-3.5 h-3.5 rounded-full bg-orange-500 inline-block"></span>
+              CO2 Bubble (Respired)
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ONLY TWO BIG, HIGH-CONTRAST PROCESS STATUS PILLS -->
+      <div class="space-y-2 pt-1">
+        <div class="text-xs font-extrabold uppercase tracking-wider text-slate-500">
+          Active Cellular Processes Right Now
+        </div>
+
+        <!-- Pill 1: Photosynthesis (Chloroplasts) -->
+        <div id="photoStatusPill"
+          class="w-full p-3.5 rounded-xl border-2 flex items-center justify-between transition bg-emerald-600 border-emerald-700 text-white shadow-sm">
+          <div>
+            <div class="text-sm sm:text-base font-extrabold">Photosynthesis (Chloroplasts)</div>
+            <div id="photoSubtext" class="text-xs text-emerald-100 font-medium">Plants + Light ON: Making O2 &amp; Glucose</div>
+          </div>
+          <span id="photoBadge" class="px-3 py-1 rounded-lg font-mono-num text-sm sm:text-base font-extrabold bg-white text-emerald-800 shadow-sm">
+            ON
+          </span>
+        </div>
+
+        <!-- Pill 2: Cellular Respiration (Mitochondria) -->
+        <div id="respStatusPill"
+          class="w-full p-3.5 rounded-xl border-2 flex items-center justify-between transition bg-amber-500 border-amber-600 text-slate-950 shadow-sm">
+          <div>
+            <div class="text-sm sm:text-base font-extrabold">Cellular Respiration (Mitochondria)</div>
+            <div id="respSubtext" class="text-xs text-amber-950 font-medium">Active 24/7 in ALL living plants &amp; fish (Uses O2, makes CO2)</div>
+          </div>
+          <span id="respBadge" class="px-3 py-1 rounded-lg font-mono-num text-sm sm:text-base font-extrabold bg-slate-900 text-amber-300 shadow-sm">
+            ON
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- =======================================================================
+         3. RIGHT PANEL — EASY-TO-READ RESULTS (5 cols on lg)
+         ======================================================================= -->
+    <section class="lg:col-span-5 space-y-4">
+
+      <!-- TOP ROW: 3 Large, Simple Meter Cards -->
+      <div class="grid grid-cols-3 gap-3">
+        <!-- Meter 1: Oxygen (O2) -->
+        <div id="o2Card" class="bg-white border-2 border-slate-200 rounded-2xl p-3.5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-1">
+              <span class="text-xs sm:text-sm font-extrabold text-blue-700">Oxygen (O2)</span>
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0"></span>
+            </div>
+            <div class="mt-1 flex items-baseline gap-1 font-mono-num">
+              <span id="o2Readout" class="text-2xl sm:text-3xl font-extrabold text-slate-900">8.0</span>
+              <span class="text-xs font-bold text-slate-500">mg/L</span>
+            </div>
+          </div>
+          <div class="mt-2.5 space-y-1">
+            <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+              <div id="o2Bar" class="h-full bg-blue-600 transition-all duration-200" style="width: 50%;"></div>
+            </div>
+            <div id="o2WarningText" class="text-[11px] font-semibold text-slate-500">Danger &lt; 2.0 mg/L</div>
+          </div>
+        </div>
+
+        <!-- Meter 2: Carbon Dioxide (CO2) -->
+        <div id="co2Card" class="bg-white border-2 border-slate-200 rounded-2xl p-3.5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-1">
+              <span class="text-xs sm:text-sm font-extrabold text-orange-600">CO2 Gas</span>
+              <span class="w-2.5 h-2.5 rounded-full bg-orange-500 shrink-0"></span>
+            </div>
+            <div class="mt-1 flex items-baseline gap-1 font-mono-num">
+              <span id="co2Readout" class="text-2xl sm:text-3xl font-extrabold text-slate-900">4.0</span>
+              <span class="text-xs font-bold text-slate-500">mg/L</span>
+            </div>
+          </div>
+          <div class="mt-2.5 space-y-1">
+            <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+              <div id="co2Bar" class="h-full bg-orange-500 transition-all duration-200" style="width: 25%;"></div>
+            </div>
+            <div id="co2WarningText" class="text-[11px] font-semibold text-slate-500">Toxic &gt; 16.0 mg/L</div>
+          </div>
+        </div>
+
+        <!-- Meter 3: Plant Glucose Reserve -->
+        <div id="glucoseCard" class="bg-white border-2 border-slate-200 rounded-2xl p-3.5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-1">
+              <span class="text-xs sm:text-sm font-extrabold text-emerald-700">Plant Glucose</span>
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-600 shrink-0"></span>
+            </div>
+            <div class="mt-1 flex items-baseline gap-1 font-mono-num">
+              <span id="glucoseReadout" class="text-2xl sm:text-3xl font-extrabold text-slate-900">60</span>
+              <span class="text-xs font-bold text-slate-500">%</span>
+            </div>
+          </div>
+          <div class="mt-2.5 space-y-1">
+            <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+              <div id="glucoseBar" class="h-full bg-emerald-600 transition-all duration-200" style="width: 60%;"></div>
+            </div>
+            <div id="glucoseWarningText" class="text-[11px] font-semibold text-slate-500">Starves at 0%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MIDDLE ROW: 48-Hour Line Graph with Hover Tooltip -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-2.5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-sm font-extrabold uppercase tracking-wider text-slate-600">
+            48-Hour Oxygen (O2) &amp; Carbon Dioxide (CO2) Graph
+          </h2>
+          <!-- Legend -->
+          <div class="flex items-center gap-3 text-xs font-bold">
+            <span class="flex items-center gap-1.5 text-blue-700">
+              <span class="w-4 h-1 bg-blue-600 inline-block rounded"></span> O2 (mg/L)
+            </span>
+            <span class="flex items-center gap-1.5 text-orange-600">
+              <span class="w-4 h-1 bg-orange-500 inline-block rounded"></span> CO2 (mg/L)
+            </span>
+            <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 text-[11px]">☀️ Light</span>
+            <span class="px-2 py-0.5 rounded bg-slate-200 text-slate-800 border border-slate-300 text-[11px]">🌑 Dark</span>
+          </div>
+        </div>
+
+        <!-- Graph Canvas & Interactive Hover Readout -->
+        <div class="relative w-full h-56 sm:h-60 bg-slate-50 rounded-xl border border-slate-200 p-1.5">
+          <canvas id="graphCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+          <!-- Floating Tooltip for Worksheet Data Reading -->
+          <div id="graphTooltip"
+            class="hidden absolute top-2 left-14 pointer-events-none bg-slate-900/95 text-white px-3 py-1.5 rounded-lg shadow-md text-xs font-mono-num z-10">
+          </div>
+        </div>
+        <div class="text-[11px] text-slate-500 font-medium text-right">
+          Hover or tap anywhere on the graph to read exact O2 and CO2 values at any hour.
+        </div>
+      </div>
+
+      <!-- BOTTOM ROW: Simple "Trial Data Log" Table -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-2.5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-sm font-extrabold uppercase tracking-wider text-slate-600">
+            Trial Data Log
+          </h2>
+          <div class="flex items-center gap-2">
+            <button onclick="logCurrentTrial(true)"
+              class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs border border-slate-300 transition">
+              + Log Current Data
+            </button>
+            <button onclick="clearTrialLog()"
+              class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-700 font-bold text-xs border border-slate-300 transition">
+              Clear Log
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto max-h-44 overflow-y-auto rounded-xl border border-slate-200">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="bg-slate-100 text-slate-700 sticky top-0 border-b border-slate-200">
+              <tr>
+                <th class="py-2 px-2.5 font-extrabold">Trial #</th>
+                <th class="py-2 px-2.5 font-extrabold">Plants</th>
+                <th class="py-2 px-2.5 font-extrabold">Fish</th>
+                <th class="py-2 px-2.5 font-extrabold">Light Mode</th>
+                <th class="py-2 px-2.5 font-extrabold">Hours</th>
+                <th class="py-2 px-2.5 font-extrabold text-blue-700">Final O2</th>
+                <th class="py-2 px-2.5 font-extrabold text-orange-600">Final CO2</th>
+                <th class="py-2 px-2.5 font-extrabold">Result</th>
+              </tr>
+            </thead>
+            <tbody id="trialTableBody" class="divide-y divide-slate-200 font-mono-num text-slate-800">
+              <tr>
+                <td colspan="8" class="py-6 text-center text-slate-400 font-sans font-medium">
+                  No trials logged yet. Press <strong>"▶ Start Trial"</strong> to run an experiment.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <script>
+    /***************************************************************************
+     * 1. STATE & AUTOMATIC +/- 12% BIOLOGICAL VARIATION ENGINE
+     ***************************************************************************/
+    const state = {
+      trialNumber: 1,
+      plants: 3,                  // 0 to 5
+      fish: 1,                    // 0 to 4
+      lightMode: 'always_light',  // 'always_light' | 'always_dark' | 'cycle'
+
+      // Simulation clock & status
+      isRunning: false,
+      speed: 1,                   // 1 or 3
+      timerId: null,
+      hour: 0,                    // 0 to 48 (steps of 1 hour)
+      crashed: false,
+      plantsAlive: true,
+      fishAlive: true,
+      crashMessage: '',
+      shortResult: '',
+      loggedThisTrial: false,
+
+      // Natural +/- 12% biological variation multipliers (regenerated each trial)
+      plantBioFactor: 1.0,
+      fishBioFactor: 1.0,
+
+      // Chemical pools
+      o2: 8.0,                    // Starts at 8.0 mg/L (Danger < 2.0, Crash at 0.0)
+      co2: 4.0,                   // Starts at 4.0 mg/L (Toxic > 16.0)
+      glucose: 60,                // Starts at 60% when plants > 0 (0% if 0 plants)
+
+      // History array for the 48-hour graph
+      history: [],
+      hoverHour: null
+    };
+
+    let trialLogs = [];
+
+    // Helper: random number in [min, max]
+    function randomBetween(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    // Apply subtle +/- 12% natural variation to plant and fish metabolic rates
+    function rollBioVariation() {
+      state.plantBioFactor = randomBetween(0.88, 1.12);
+      state.fishBioFactor = randomBetween(0.88, 1.12);
+      const badge = document.getElementById('bioVariationBadge');
+      if (badge) {
+        badge.textContent = `Natural Bio-Variation Active — Trial #${state.trialNumber}`;
+      }
+    }
+
+    // Determine if Light is ON at a given hour (0 to 48)
+    function isLightOnAtHour(h = state.hour) {
+      if (state.lightMode === 'always_light') return true;
+      if (state.lightMode === 'always_dark') return false;
+      // 12h Light (0-11, 24-35) / 12h Dark (12-23, 36-47)
+      const mod24 = h % 24;
+      return mod24 < 12;
+    }
+
+    function getLightModeName(mode = state.lightMode) {
+      if (mode === 'always_light') return 'Always Light (24h)';
+      if (mode === 'always_dark') return 'Always Dark (24h)';
+      return 'Day / Night (12h/12h)';
+    }
+
+    /***************************************************************************
+     * 2. LEFT SIDEBAR CONTROLS (PLANTS, FISH, LIGHT MODE, SPEED)
+     ***************************************************************************/
+    function changePlants(delta) {
+      pauseSimulation();
+      state.plants = Math.max(0, Math.min(5, state.plants + delta));
+      resetCurrentTrialState(false);
+    }
+
+    function changeFish(delta) {
+      pauseSimulation();
+      state.fish = Math.max(0, Math.min(4, state.fish + delta));
+      resetCurrentTrialState(false);
+    }
+
+    function setLightMode(mode) {
+      pauseSimulation();
+      state.lightMode = mode;
+      updateLightButtonsUI();
+      resetCurrentTrialState(false);
+    }
+
+    function setSpeed(spd) {
+      state.speed = spd;
+      const b1 = document.getElementById('speed1Btn');
+      const b3 = document.getElementById('speed3Btn');
+      if (spd === 1) {
+        b1.className = 'flex-1 py-1.5 rounded-lg font-extrabold text-xs sm:text-sm bg-white text-slate-900 shadow-sm transition';
+        b3.className = 'flex-1 py-1.5 rounded-lg font-extrabold text-xs sm:text-sm text-slate-600 hover:text-slate-900 transition';
+      } else {
+        b3.className = 'flex-1 py-1.5 rounded-lg font-extrabold text-xs sm:text-sm bg-white text-slate-900 shadow-sm transition';
+        b1.className = 'flex-1 py-1.5 rounded-lg font-extrabold text-xs sm:text-sm text-slate-600 hover:text-slate-900 transition';
+      }
+      if (state.isRunning) {
+        pauseSimulation();
+        startSimulation();
+      }
+    }
+
+    function updateLightButtonsUI() {
+      const configs = [
+        { id: 'lightBtnAlwaysLight', mode: 'always_light' },
+        { id: 'lightBtnAlwaysDark', mode: 'always_dark' },
+        { id: 'lightBtnCycle', mode: 'cycle' }
+      ];
+      configs.forEach(c => {
+        const btn = document.getElementById(c.id);
+        if (state.lightMode === c.mode) {
+          btn.className = 'w-full p-3 rounded-xl border-2 text-left transition flex items-center gap-3 bg-amber-50 border-amber-500 text-slate-900 shadow-sm';
+        } else {
+          btn.className = 'w-full p-3 rounded-xl border-2 text-left transition flex items-center gap-3 bg-white border-slate-200 text-slate-700 hover:bg-slate-50';
+        }
+      });
+    }
+
+    function renderSelectorPreviews() {
+      document.getElementById('plantCountLabel').textContent = state.plants;
+      document.getElementById('fishCountLabel').textContent = state.fish;
+
+      const plantsDead = state.plants > 0 && !state.plantsAlive;
+      const fishDead = state.fish > 0 && !state.fishAlive;
+
+      const plantCard = document.getElementById('plantSetupCard');
+      const plantDeadBadge = document.getElementById('plantDeadBadge');
+      if (plantsDead) {
+        plantCard.className = 'bg-rose-50/80 border-2 border-rose-400 rounded-xl p-3 space-y-2 transition-colors';
+        plantDeadBadge.classList.remove('hidden');
+      } else {
+        plantCard.className = 'bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 transition-colors';
+        plantDeadBadge.classList.add('hidden');
+      }
+
+      const fishCard = document.getElementById('fishSetupCard');
+      const fishDeadBadge = document.getElementById('fishDeadBadge');
+      if (fishDead) {
+        fishCard.className = 'bg-rose-50/80 border-2 border-rose-400 rounded-xl p-3 space-y-2 transition-colors';
+        fishDeadBadge.classList.remove('hidden');
+      } else {
+        fishCard.className = 'bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 transition-colors';
+        fishDeadBadge.classList.add('hidden');
+      }
+
+      const plantPreview = document.getElementById('plantIconPreview');
+      if (state.plants === 0) {
+        plantPreview.innerHTML = `<span class="text-xs text-slate-400 italic">No plants selected (0)</span>`;
+      } else {
+        plantPreview.innerHTML = Array.from({ length: state.plants })
+          .map(() => plantsDead
+            ? `<span class="relative inline-flex items-center justify-center w-8 h-8 rounded-lg bg-rose-100 border-2 border-rose-400 text-sm select-none" title="Plant Died">
+                 <span class="opacity-40 grayscale">🌿</span>
+                 <svg class="absolute inset-0 w-full h-full text-rose-600 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round">
+                   <line x1="4" y1="4" x2="20" y2="20"></line>
+                   <line x1="20" y1="4" x2="4" y2="20"></line>
+                 </svg>
+               </span>`
+            : `<span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 border border-emerald-300 text-sm select-none">🌿</span>`
+          )
+          .join('');
+      }
+
+      const fishPreview = document.getElementById('fishIconPreview');
+      if (state.fish === 0) {
+        fishPreview.innerHTML = `<span class="text-xs text-slate-400 italic">No fish selected (0)</span>`;
+      } else {
+        fishPreview.innerHTML = Array.from({ length: state.fish })
+          .map(() => fishDead
+            ? `<span class="relative inline-flex items-center justify-center w-8 h-8 rounded-lg bg-rose-100 border-2 border-rose-400 text-sm select-none" title="Fish Died">
+                 <span class="opacity-40 grayscale">🐟</span>
+                 <svg class="absolute inset-0 w-full h-full text-rose-600 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round">
+                   <line x1="4" y1="4" x2="20" y2="20"></line>
+                   <line x1="20" y1="4" x2="4" y2="20"></line>
+                 </svg>
+               </span>`
+            : `<span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-amber-100 text-amber-700 border border-amber-300 text-sm select-none">🐟</span>`
+          )
+          .join('');
+      }
+    }
+
+    /***************************************************************************
+     * 3. BIOCHEMICAL SIMULATION ENGINE (1-HOUR STEPS FROM 0 TO 48 HOURS)
+     ***************************************************************************/
+    function startNewTrialReset() {
+      pauseSimulation();
+      state.trialNumber += 1;
+      resetCurrentTrialState(true);
+    }
+
+    function resetCurrentTrialState(incrementedTrial = false) {
+      rollBioVariation();
+      state.hour = 0;
+      state.crashed = false;
+      state.plantsAlive = true;
+      state.fishAlive = true;
+      state.crashMessage = '';
+      state.shortResult = '';
+      state.loggedThisTrial = false;
+      state.hoverHour = null;
+
+      // Initial chemical readings with subtle real-world sensor variation
+      state.o2 = 8.0;
+      state.co2 = 4.0;
+      state.glucose = state.plants > 0 ? 60 : 0;
+
+      state.history = [{
+        hour: 0,
+        o2: state.o2,
+        co2: state.co2,
+        glucose: state.glucose,
+        lightOn: isLightOnAtHour(0)
+      }];
+
+      document.getElementById('outcomeBanner').classList.add('hidden');
+      renderSelectorPreviews();
+      updateAllUI();
+    }
+
+    function toggleSimulation() {
+      if (state.isRunning) {
+        pauseSimulation();
+      } else {
+        startSimulation();
+      }
+    }
+
+    function startSimulation() {
+      // If previous trial finished or crashed, start a fresh trial automatically
+      if (state.crashed || state.hour >= 48) {
+        state.trialNumber += 1;
+        resetCurrentTrialState(true);
+      }
+
+      state.isRunning = true;
+      updateStartPauseUI();
+
+      const intervalMs = state.speed === 3 ? 110 : 320;
+      state.timerId = setInterval(() => {
+        stepOneHour();
+      }, intervalMs);
+    }
+
+    function pauseSimulation() {
+      state.isRunning = false;
+      if (state.timerId) {
+        clearInterval(state.timerId);
+        state.timerId = null;
+      }
+      updateStartPauseUI();
+    }
+
+    function updateStartPauseUI() {
+      const btn = document.getElementById('startPauseBtn');
+      const label = document.getElementById('startPauseLabel');
+
+      if (state.isRunning) {
+        btn.className = 'w-full py-3.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-base shadow-md transition flex items-center justify-center gap-2';
+        label.textContent = '⏸ Pause';
+      } else if (state.crashed || state.hour >= 48) {
+        btn.className = 'w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-base shadow-md transition flex items-center justify-center gap-2';
+        label.textContent = '▶ Start New Trial';
+      } else {
+        btn.className = 'w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-base shadow-md transition flex items-center justify-center gap-2';
+        label.textContent = state.hour > 0 ? '▶ Resume Trial' : '▶ Start Trial';
+      }
+    }
+
+    // Advance the ecosphere by 1 hour
+    function stepOneHour() {
+      if (state.crashed || state.hour >= 48) {
+        pauseSimulation();
+        return;
+      }
+
+      const lightOn = isLightOnAtHour(state.hour);
+      state.hour += 1;
+
+      const pRate = state.plants * state.plantBioFactor;
+      const fRate = state.fish * state.fishBioFactor;
+
+      // 1. Photosynthesis (ONLY when Plants > 0, Light is ON, and CO2 > 0)
+      let photoO2Gain = 0;
+      let photoCo2Used = 0;
+      let glucoseGain = 0;
+
+      if (state.plants > 0 && lightOn && state.co2 > 0.05) {
+        // Michaelis-Menten saturation so CO2 smoothly approaches low levels without going negative
+        const co2Availability = state.co2 / (state.co2 + 1.1);
+        photoO2Gain = pRate * 0.36 * co2Availability;
+        photoCo2Used = photoO2Gain * 0.85;
+        glucoseGain = pRate * 1.45 * co2Availability;
+      }
+
+      // 2. Cellular Respiration in Plants (24/7 Day & Night)
+      const plantRespO2Used = state.plants > 0 ? pRate * 0.095 : 0;
+      const plantRespCo2Made = plantRespO2Used * 0.95;
+      const plantGlucoseBurned = state.plants > 0 ? (lightOn ? 0.65 : 1.75) * state.plantBioFactor : 0;
+
+      // 3. Cellular Respiration in Fish (24/7 Day & Night)
+      const fishRespO2Used = state.fish > 0 ? fRate * 0.36 : 0;
+      const fishRespCo2Made = fishRespO2Used * 0.98;
+      // Fish nibbling slightly reduces plant glucose reserves
+      const fishGrazingLoss = (state.plants > 0 && state.fish > 0) ? (state.fish * 0.28) / state.plants : 0;
+
+      // Small realistic per-hour fluctuation when organisms are present
+      const hasLife = state.plants > 0 || state.fish > 0;
+      const microNoiseO2 = hasLife ? randomBetween(-0.04, 0.04) : 0;
+      const microNoiseCo2 = hasLife ? randomBetween(-0.04, 0.04) : 0;
+
+      // Update O2, CO2, and Glucose pools
+      const netO2 = photoO2Gain - (plantRespO2Used + fishRespO2Used) + microNoiseO2;
+      const netCo2 = (plantRespCo2Made + fishRespCo2Made) - photoCo2Used + microNoiseCo2;
+      const netGlucose = glucoseGain - plantGlucoseBurned - fishGrazingLoss;
+
+      state.o2 = Math.max(0.0, Math.min(18.0, Number((state.o2 + netO2).toFixed(2))));
+      state.co2 = Math.max(0.0, Math.min(20.0, Number((state.co2 + netCo2).toFixed(2))));
+
+      if (state.plants > 0) {
+        state.glucose = Math.max(0, Math.min(100, Math.round(state.glucose + netGlucose)));
+      } else {
+        state.glucose = 0;
+      }
+
+      // Check crash thresholds
+      if (hasLife && state.o2 <= 0.2) {
+        state.o2 = 0.0;
+        state.crashed = true;
+        if (state.fish > 0) state.fishAlive = false;
+        if (state.plants > 0) state.plantsAlive = false;
+        state.crashMessage = `⚠️ System Crashed at Hour ${state.hour}: Oxygen (O2) Dropped to 0.0 mg/L`;
+        state.shortResult = `Crashed (0 mg/L O2)`;
+      } else if (state.fish > 0 && state.co2 >= 16.0) {
+        state.co2 = 16.0;
+        state.crashed = true;
+        state.fishAlive = false;
+        state.crashMessage = `⚠️ System Crashed at Hour ${state.hour}: CO2 Reached Toxic Level (16.0 mg/L)`;
+        state.shortResult = `Crashed (Toxic CO2)`;
+      } else if (state.plants > 0 && state.glucose <= 0) {
+        state.glucose = 0;
+        state.crashed = true;
+        state.plantsAlive = false;
+        state.crashMessage = `⚠️ System Crashed at Hour ${state.hour}: Plant Glucose Reserve Dropped to 0%`;
+        state.shortResult = `Crashed (0% Glucose)`;
+      }
+
+      // Save point to graph history
+      state.history.push({
+        hour: state.hour,
+        o2: state.o2,
+        co2: state.co2,
+        glucose: state.glucose,
+        lightOn: isLightOnAtHour(state.hour)
+      });
+
+      // Check if trial finished at Hour 48 or crashed
+      if (state.crashed || state.hour >= 48) {
+        pauseSimulation();
+        if (!state.crashed) {
+          if (!hasLife) {
+            state.crashMessage = `✅ Trial Complete (48 Hours): Control Dome (No Organisms — No Change)`;
+            state.shortResult = `Control (No Change)`;
+          } else {
+            state.crashMessage = `✅ Survived All 48 Hours! Ecosystem stayed balanced.`;
+            state.shortResult = `Survived 48h`;
+          }
+        }
+        showOutcomeBanner();
+        if (!state.loggedThisTrial) {
+          logCurrentTrial(false);
+          state.loggedThisTrial = true;
+        }
+      }
+
+      updateAllUI();
+    }
+
+    function showOutcomeBanner() {
+      const banner = document.getElementById('outcomeBanner');
+      banner.classList.remove('hidden');
+      if (state.crashed) {
+        banner.className = 'rounded-xl p-3 border-2 bg-rose-50 border-rose-500 text-rose-900 text-xs sm:text-sm font-extrabold text-center shadow-sm';
+      } else {
+        banner.className = 'rounded-xl p-3 border-2 bg-emerald-50 border-emerald-500 text-emerald-900 text-xs sm:text-sm font-extrabold text-center shadow-sm';
+      }
+      banner.textContent = state.crashMessage;
+    }
+
+    /***************************************************************************
+     * 4. CENTER PANEL — BIO-DOME SVG & PROCESS PILLS RENDERING
+     ***************************************************************************/
+    function updateAllUI() {
+      const lightOn = isLightOnAtHour(state.hour);
+
+      // Clock & Light Status Badge
+      document.getElementById('clockDisplay').textContent = `Hour ${state.hour} / 48`;
+      const lightBadge = document.getElementById('lightingBadge');
+      if (lightOn) {
+        lightBadge.textContent = '☀️ LIGHT ON';
+        lightBadge.className = 'px-3 py-1 rounded-lg text-xs font-extrabold bg-amber-100 text-amber-900 border border-amber-300';
+      } else {
+        lightBadge.textContent = '🌑 DARK (NIGHT)';
+        lightBadge.className = 'px-3 py-1 rounded-lg text-xs font-extrabold bg-slate-800 text-slate-100 border border-slate-700';
+      }
+
+      renderSelectorPreviews();
+      renderBioDomeScene(lightOn);
+      renderProcessPills(lightOn);
+      renderMeters();
+      drawGraph();
+      updateStartPauseUI();
+    }
+
+    function renderBioDomeScene(lightOn) {
+      // Sky, Water, Sun, Stars, Dark Foil Badge
+      document.getElementById('domeSkyRect').setAttribute('fill', lightOn ? 'url(#daySky)' : 'url(#nightSky)');
+      document.getElementById('domeWaterPath').setAttribute('fill', lightOn ? 'url(#dayWater)' : 'url(#nightWater)');
+      document.getElementById('domeSunGroup').setAttribute('opacity', lightOn ? '1' : '0');
+      document.getElementById('domeNightStars').setAttribute('opacity', lightOn ? '0' : '1');
+      document.getElementById('alwaysDarkCoverBadge').setAttribute('opacity', state.lightMode === 'always_dark' ? '1' : '0');
+
+      // 1. Render Aquatic Plants (0 to 5)
+      const plantX = [115, 172, 230, 288, 345];
+      const plantsGroup = document.getElementById('domePlantsGroup');
+      const plantsDead = !state.plantsAlive;
+      const stemCol = plantsDead ? '#92400e' : '#15803d';
+      const leafCol1 = plantsDead ? '#b45309' : '#16a34a';
+      const leafCol2 = plantsDead ? '#d97706' : '#22c55e';
+
+      let plantsSvg = '';
+      for (let i = 0; i < state.plants; i++) {
+        const x = plantX[i];
+        plantsSvg += `
+          <g transform="translate(${x}, 268)" class="${plantsDead ? '' : 'plant-sway'}" style="animation-delay: ${i * 0.4}s">
+            <path d="M0,0 Q-5,-45 2,-90 Q6,-118 -2,-138" fill="none" stroke="${stemCol}" stroke-width="4.5" stroke-linecap="round" />
+            <ellipse cx="-11" cy="-30" rx="11" ry="4.5" transform="rotate(-25 -11 -30)" fill="${leafCol1}" />
+            <ellipse cx="11" cy="-36" rx="11" ry="4.5" transform="rotate(25 11 -36)" fill="${leafCol2}" />
+            <ellipse cx="-12" cy="-60" rx="12" ry="4.5" transform="rotate(-25 -12 -60)" fill="${leafCol2}" />
+            <ellipse cx="12" cy="-66" rx="12" ry="4.5" transform="rotate(25 12 -66)" fill="${leafCol1}" />
+            <ellipse cx="-11" cy="-90" rx="11" ry="4.5" transform="rotate(-22 -11 -90)" fill="${leafCol1}" />
+            <ellipse cx="11" cy="-96" rx="11" ry="4.5" transform="rotate(22 11 -96)" fill="${leafCol2}" />
+            <ellipse cx="-8" cy="-118" rx="9.5" ry="4" transform="rotate(-18 -8 -118)" fill="${leafCol2}" />
+            <ellipse cx="8" cy="-122" rx="9.5" ry="4" transform="rotate(18 8 -122)" fill="${leafCol1}" />
+          </g>
+        `;
+      }
+      plantsGroup.innerHTML = plantsSvg;
+
+      // 2. Render Swimming Fish (0 to 4)
+      const fishSlots = [
+        { x: 145, y: 175, cls: 'fish-a' },
+        { x: 280, y: 205, cls: 'fish-b' },
+        { x: 195, y: 145, cls: 'fish-a' },
+        { x: 305, y: 162, cls: 'fish-b' }
+      ];
+      const fishGroup = document.getElementById('domeFishGroup');
+      const fishDead = !state.fishAlive;
+      const fishLowO2 = !state.crashed && state.o2 < 2.0;
+
+      let fishSvg = '';
+      for (let i = 0; i < state.fish; i++) {
+        const slot = fishSlots[i];
+        const animClass = fishDead ? '' : (fishLowO2 ? 'fish-slow' : slot.cls);
+        const yPos = fishDead ? 114 + i * 6 : slot.y;
+        const flipTransform = fishDead ? 'scale(1, -1)' : '';
+        const bodyFill = fishDead ? '#94a3b8' : '#f59e0b';
+        const tailFill = fishDead ? '#64748b' : '#d97706';
+
+        fishSvg += `
+          <g transform="translate(${slot.x}, ${yPos})">
+            <g class="${animClass}" transform="${flipTransform}">
+              <polygon points="-16,0 -26,-8 -26,8" fill="${tailFill}" />
+              <ellipse cx="0" cy="0" rx="17" ry="9.5" fill="${bodyFill}" stroke="#78350f" stroke-width="1.2" />
+              <polygon points="-3,-9 4,-15 8,-8" fill="${tailFill}" />
+              ${
+                fishDead
+                  ? `<path d="M8,-3 L12,1 M12,-3 L8,1" stroke="#0f172a" stroke-width="1.8" stroke-linecap="round" />`
+                  : `<circle cx="10" cy="-2" r="2.2" fill="#0f172a" />`
+              }
+            </g>
+          </g>
+        `;
+      }
+      fishGroup.innerHTML = fishSvg;
+
+      // 3. Render Labeled Gas Bubbles (O2 and CO2)
+      const bubblesGroup = document.getElementById('domeBubblesGroup');
+      let bubblesSvg = '';
+
+      const canPhotosynthesize = state.plants > 0 && state.plantsAlive && lightOn && state.co2 > 0.05 && !state.crashed;
+      if (canPhotosynthesize) {
+        for (let i = 0; i < state.plants; i++) {
+          const bx = plantX[i] + (i % 2 === 0 ? -8 : 8);
+          const by = 210 - (i % 3) * 14;
+          bubblesSvg += `
+            <g class="bubble-rise" style="animation-delay: ${(i * 0.55).toFixed(2)}s">
+              <circle cx="${bx}" cy="${by}" r="9.5" fill="#2563eb" fill-opacity="0.9" stroke="#bfdbfe" stroke-width="1.5" />
+              <text x="${bx}" y="${by + 3}" fill="#ffffff" font-size="7.5" font-weight="bold" text-anchor="middle">O2</text>
+            </g>
+          `;
+        }
+      }
+
+      const plantsRespiring = state.plants > 0 && state.plantsAlive && state.o2 > 0 && !state.crashed;
+      const fishRespiring = state.fish > 0 && state.fishAlive && state.o2 > 0 && !state.crashed;
+
+      if (fishRespiring) {
+        for (let i = 0; i < state.fish; i++) {
+          const slot = fishSlots[i];
+          const bx = slot.x + 16;
+          const by = slot.y - 8;
+          bubblesSvg += `
+            <g class="bubble-rise" style="animation-delay: ${(0.25 + i * 0.65).toFixed(2)}s">
+              <circle cx="${bx}" cy="${by}" r="10.5" fill="#f97316" fill-opacity="0.92" stroke="#fed7aa" stroke-width="1.5" />
+              <text x="${bx}" y="${by + 3}" fill="#ffffff" font-size="7" font-weight="bold" text-anchor="middle">CO2</text>
+            </g>
+          `;
+        }
+      }
+
+      if (plantsRespiring) {
+        const plantCo2Count = Math.min(state.plants, lightOn ? 2 : state.plants);
+        for (let i = 0; i < plantCo2Count; i++) {
+          const bx = plantX[i] + 10;
+          const by = 232 - (i % 2) * 16;
+          bubblesSvg += `
+            <g class="bubble-rise" style="animation-delay: ${(1.1 + i * 0.7).toFixed(2)}s">
+              <circle cx="${bx}" cy="${by}" r="10" fill="#f97316" fill-opacity="0.88" stroke="#fed7aa" stroke-width="1.5" />
+              <text x="${bx}" y="${by + 3}" fill="#ffffff" font-size="7" font-weight="bold" text-anchor="middle">CO2</text>
+            </g>
+          `;
+        }
+      }
+
+      bubblesGroup.innerHTML = bubblesSvg;
+    }
+
+    function renderProcessPills(lightOn) {
+      const photoPill = document.getElementById('photoStatusPill');
+      const photoSub = document.getElementById('photoSubtext');
+      const photoBadge = document.getElementById('photoBadge');
+
+      const photoActive = state.plants > 0 && state.plantsAlive && lightOn && state.co2 > 0.05 && !state.crashed;
+
+      if (photoActive) {
+        photoPill.className = 'w-full p-3.5 rounded-xl border-2 flex items-center justify-between transition bg-emerald-600 border-emerald-700 text-white shadow-sm';
+        photoBadge.className = 'px-3 py-1 rounded-lg font-mono-num text-sm sm:text-base font-extrabold bg-white text-emerald-800 shadow-sm';
+        photoBadge.textContent = 'ON';
+        photoSub.className = 'text-xs text-emerald-100 font-medium';
+        photoSub.textContent = 'Plants + Light ON: Absorbing CO2, making O2 & Glucose';
+      } else {
+        photoPill.className = 'w-full p-3.5 rounded-xl border-2 flex items-center justify-between transition bg-slate-200 border-slate-300 text-slate-600';
+        photoBadge.className = 'px-3 py-1 rounded-lg font-mono-num text-sm sm:text-base font-extrabold bg-slate-300 text-slate-700';
+        photoBadge.textContent = 'OFF';
+        photoSub.className = 'text-xs text-slate-500 font-medium';
+
+        if (state.plants === 0) {
+          photoSub.textContent = 'No Plants in Ecosphere (0 Chloroplasts)';
+        } else if (!state.plantsAlive) {
+          photoSub.textContent = 'Plants Died — Photosynthesis Stopped';
+        } else if (!lightOn) {
+          photoSub.textContent = 'DARKNESS: No Light Energy to Run Photosynthesis';
+        } else if (state.co2 <= 0.05) {
+          photoSub.textContent = 'Depleted CO2: Plants Need CO2 Input to Make Glucose';
+        } else {
+          photoSub.textContent = 'System Crashed — Photosynthesis Stopped';
+        }
+      }
+
+      const respPill = document.getElementById('respStatusPill');
+      const respSub = document.getElementById('respSubtext');
+      const respBadge = document.getElementById('respBadge');
+
+      const anyLiving = (state.plants > 0 && state.plantsAlive) || (state.fish > 0 && state.fishAlive);
+      const respActive = anyLiving && state.o2 > 0 && !state.crashed;
+
+      if (respActive) {
+        respPill.className = 'w-full p-3.5 rounded-xl border-2 flex items-center justify-between transition bg-amber-500 border-amber-600 text-slate-950 shadow-sm';
+        respBadge.className = 'px-3 py-1 rounded-lg font-mono-num text-sm sm:text-base font-extrabold bg-slate-900 text-amber-300 shadow-sm';
+        respBadge.textContent = 'ON';
+        respSub.className = 'text-xs text-amber-950 font-medium';
+
+        if (state.plants > 0 && state.fish > 0) {
+          respSub.textContent = 'Active 24/7 in BOTH Plants & Fish (Uses O2 -> Makes CO2 & ATP)';
+        } else if (state.plants > 0) {
+          respSub.textContent = 'Active 24/7 in Living Plants (Uses O2 & Glucose -> Makes CO2 & ATP)';
+        } else {
+          respSub.textContent = 'Active 24/7 in Living Fish (Uses O2 -> Makes CO2 & ATP)';
+        }
+      } else {
+        respPill.className = 'w-full p-3.5 rounded-xl border-2 flex items-center justify-between transition bg-slate-200 border-slate-300 text-slate-600';
+        respBadge.className = 'px-3 py-1 rounded-lg font-mono-num text-sm sm:text-base font-extrabold bg-slate-300 text-slate-700';
+        respBadge.textContent = 'OFF';
+        respSub.className = 'text-xs text-slate-500 font-medium';
+
+        if (state.plants === 0 && state.fish === 0) {
+          respSub.textContent = 'No Organisms in Ecosphere (Control Setup)';
+        } else {
+          respSub.textContent = 'System Crashed — Cellular Respiration Stopped';
+        }
+      }
+    }
+
+    function renderMeters() {
+      // 1. Oxygen (O2) Meter
+      document.getElementById('o2Readout').textContent = state.o2.toFixed(1);
+      const o2Pct = Math.max(0, Math.min(100, (state.o2 / 16.0) * 100));
+      document.getElementById('o2Bar').style.width = `${o2Pct}%`;
+
+      const o2Card = document.getElementById('o2Card');
+      const o2Warn = document.getElementById('o2WarningText');
+      if (state.o2 < 2.0 && (state.plants > 0 || state.fish > 0)) {
+        o2Card.className = 'bg-rose-50 border-2 border-rose-500 rounded-2xl p-3.5 shadow-sm flex flex-col justify-between';
+        o2Warn.className = 'text-[11px] font-extrabold text-rose-700';
+        o2Warn.textContent = state.o2 <= 0.2 ? 'CRITICAL: 0.0 mg/L!' : 'LOW O2 WARNING (<2.0)';
+      } else {
+        o2Card.className = 'bg-white border-2 border-slate-200 rounded-2xl p-3.5 shadow-sm flex flex-col justify-between';
+        o2Warn.className = 'text-[11px] font-semibold text-slate-500';
+        o2Warn.textContent = 'Danger < 2.0 mg/L';
+      }
+
+      // 2. Carbon Dioxide (CO2) Meter
+      document.getElementById('co2Readout').textContent = state.co2.toFixed(1);
+      const co2Pct = Math.max(0, Math.min(100, (state.co2 / 16.0) * 100));
+      document.getElementById('co2Bar').style.width = `${co2Pct}%`;
+
+      const co2Card = document.getElementById('co2Card');
+      const co2Warn = document.getElementById('co2WarningText');
+      if (state.co2 >= 13.0 && state.fish > 0) {
+        co2Card.className = 'bg-rose-50 border-2 border-rose-500 rounded-2xl p-3.5 shadow-sm flex flex-col justify-between';
+        co2Warn.className = 'text-[11px] font-extrabold text-rose-700';
+        co2Warn.textContent = state.co2 >= 16.0 ? 'TOXIC CO2 CRASH!' : 'HIGH CO2 WARNING';
+      } else {
+        co2Card.className = 'bg-white border-2 border-slate-200 rounded-2xl p-3.5 shadow-sm flex flex-col justify-between';
+        co2Warn.className = 'text-[11px] font-semibold text-slate-500';
+        co2Warn.textContent = 'Toxic > 16.0 mg/L';
+      }
+
+      // 3. Plant Glucose Reserve Meter
+      document.getElementById('glucoseReadout').textContent = state.glucose;
+      document.getElementById('glucoseBar').style.width = `${state.glucose}%`;
+
+      const glucoseCard = document.getElementById('glucoseCard');
+      const glucoseWarn = document.getElementById('glucoseWarningText');
+      if (state.plants === 0) {
+        glucoseCard.className = 'bg-slate-50 border-2 border-slate-200 rounded-2xl p-3.5 shadow-sm flex flex-col justify-between opacity-75';
+        glucoseWarn.className = 'text-[11px] font-semibold text-slate-400';
+        glucoseWarn.textContent = 'No Plants Selected';
+      } else if (state.glucose <= 18) {
+        glucoseCard.className = 'bg-rose-50 border-2 border-rose-500 rounded-2xl p-3.5 shadow-sm flex flex-col justify-between';
+        glucoseWarn.className = 'text-[11px] font-extrabold text-rose-700';
+        glucoseWarn.textContent = state.glucose <= 0 ? 'PLANTS STARVED (0%)' : 'LOW GLUCOSE RESERVE!';
+      } else {
+        glucoseCard.className = 'bg-white border-2 border-slate-200 rounded-2xl p-3.5 shadow-sm flex flex-col justify-between';
+        glucoseWarn.className = 'text-[11px] font-semibold text-slate-500';
+        glucoseWarn.textContent = 'Starves at 0%';
+      }
+    }
+
+    function drawGraph() {
+      const canvas = document.getElementById('graphCanvas');
+      if (!canvas) return;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.max(280, rect.width - 12) * dpr;
+      canvas.height = Math.max(180, rect.height - 12) * dpr;
+
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+
+      const W = canvas.width / dpr;
+      const H = canvas.height / dpr;
+      const padL = 38;
+      const padR = 14;
+      const padT = 14;
+      const padB = 26;
+      const plotW = W - padL - padR;
+      const plotH = H - padT - padB;
+      const yMax = 18.0;
+
+      ctx.clearRect(0, 0, W, H);
+
+      // 1. Draw Day / Night Hourly Background Shading (Hours 0 to 48)
+      const colW = plotW / 48;
+      for (let h = 0; h < 48; h++) {
+        const light = isLightOnAtHour(h);
+        ctx.fillStyle = light ? 'rgba(254, 243, 199, 0.55)' : 'rgba(203, 213, 225, 0.55)';
+        ctx.fillRect(padL + h * colW, padT, colW + 0.5, plotH);
+      }
+
+      // 2. Horizontal Grid Lines & Y-Axis Labels (0 to 18 mg/L)
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.fillStyle = '#475569';
+      ctx.font = '600 10px JetBrains Mono, monospace';
+      ctx.textAlign = 'right';
+
+      [0, 4, 8, 12, 16].forEach(val => {
+        const y = padT + plotH - (val / yMax) * plotH;
+        ctx.beginPath();
+        ctx.moveTo(padL, y);
+        ctx.lineTo(padL + plotW, y);
+        ctx.stroke();
+        ctx.fillText(`${val}`, padL - 6, y + 3.5);
+      });
+
+      // 3. Vertical Grid Lines & X-Axis Labels (Every 12 hours)
+      ctx.textAlign = 'center';
+      [0, 12, 24, 36, 48].forEach(hr => {
+        const x = padL + (hr / 48) * plotW;
+        ctx.beginPath();
+        ctx.moveTo(x, padT);
+        ctx.lineTo(x, padT + plotH);
+        ctx.stroke();
+        ctx.fillText(`${hr}h`, x, padT + plotH + 16);
+      });
+
+      if (state.history.length > 0) {
+        // Plot CO2 Line (Orange)
+        ctx.strokeStyle = '#f97316';
+        ctx.lineWidth = 2.8;
+        ctx.beginPath();
+        state.history.forEach((pt, idx) => {
+          const x = padL + (pt.hour / 48) * plotW;
+          const y = padT + plotH - (Math.min(yMax, pt.co2) / yMax) * plotH;
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        // Plot O2 Line (Blue)
+        ctx.strokeStyle = '#2563eb';
+        ctx.lineWidth = 2.8;
+        ctx.beginPath();
+        state.history.forEach((pt, idx) => {
+          const x = padL + (pt.hour / 48) * plotW;
+          const y = padT + plotH - (Math.min(yMax, pt.o2) / yMax) * plotH;
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        // Endpoint dots
+        const last = state.history[state.history.length - 1];
+        const lx = padL + (last.hour / 48) * plotW;
+        const lyO2 = padT + plotH - (Math.min(yMax, last.o2) / yMax) * plotH;
+        const lyCo2 = padT + plotH - (Math.min(yMax, last.co2) / yMax) * plotH;
+
+        ctx.fillStyle = '#f97316';
+        ctx.beginPath();
+        ctx.arc(lx, lyCo2, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#2563eb';
+        ctx.beginPath();
+        ctx.arc(lx, lyO2, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 4. Hover Marker Line if active
+      if (state.hoverHour !== null) {
+        const pt = state.history.find(p => p.hour === state.hoverHour);
+        if (pt) {
+          const hx = padL + (pt.hour / 48) * plotW;
+          ctx.strokeStyle = '#0f172a';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([4, 3]);
+          ctx.beginPath();
+          ctx.moveTo(hx, padT);
+          ctx.lineTo(hx, padT + plotH);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+    }
+
+    function setupGraphHoverEvents() {
+      const canvas = document.getElementById('graphCanvas');
+      const tooltip = document.getElementById('graphTooltip');
+      if (!canvas || !tooltip) return;
+
+      function handlePointer(clientX) {
+        const rect = canvas.getBoundingClientRect();
+        const padL = 38;
+        const padR = 14;
+        const plotW = rect.width - padL - padR;
+        const relX = clientX - rect.left - padL;
+        const rawHour = Math.round((relX / plotW) * 48);
+        const clampedHour = Math.max(0, Math.min(state.hour, rawHour));
+        const pt = state.history.find(p => p.hour === clampedHour);
+
+        if (pt) {
+          state.hoverHour = clampedHour;
+          tooltip.classList.remove('hidden');
+          tooltip.innerHTML = `Hour ${pt.hour} (${pt.lightOn ? '☀️ Light' : '🌑 Dark'}) &bull; <span class="text-blue-300">O2: ${pt.o2.toFixed(1)}</span> &bull; <span class="text-orange-300">CO2: ${pt.co2.toFixed(1)}</span> &bull; <span class="text-emerald-300">Glucose: ${pt.glucose}%</span>`;
+          drawGraph();
+        }
+      }
+
+      canvas.addEventListener('mousemove', e => handlePointer(e.clientX));
+      canvas.addEventListener('touchstart', e => {
+        if (e.touches && e.touches[0]) handlePointer(e.touches[0].clientX);
+      }, { passive: true });
+      canvas.addEventListener('touchmove', e => {
+        if (e.touches && e.touches[0]) handlePointer(e.touches[0].clientX);
+      }, { passive: true });
+      canvas.addEventListener('mouseleave', () => {
+        state.hoverHour = null;
+        tooltip.classList.add('hidden');
+        drawGraph();
+      });
+    }
+
+    /***************************************************************************
+     * 5. TRIAL DATA LOG TABLE
+     ***************************************************************************/
+    function logCurrentTrial(isManual = false) {
+      let resultText = state.shortResult;
+      if (!resultText) {
+        if (state.hour === 0) {
+          resultText = 'Start (0h)';
+        } else if (!state.crashed && state.hour < 48) {
+          resultText = `In Progress (${state.hour}h)`;
+        } else if (!state.crashed) {
+          resultText = (state.plants === 0 && state.fish === 0) ? 'Control (No Change)' : 'Survived 48h';
+        }
+      }
+
+      trialLogs.unshift({
+        trial: state.trialNumber,
+        plants: state.plants,
+        fish: state.fish,
+        lightMode: getLightModeName(state.lightMode),
+        hours: `${state.hour} / 48`,
+        o2: `${state.o2.toFixed(1)} mg/L`,
+        co2: `${state.co2.toFixed(1)} mg/L`,
+        result: resultText,
+        crashed: state.crashed
+      });
+
+      renderTrialLogTable();
+    }
+
+    function clearTrialLog() {
+      trialLogs = [];
+      renderTrialLogTable();
+    }
+
+    function renderTrialLogTable() {
+      const tbody = document.getElementById('trialTableBody');
+      if (trialLogs.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="py-6 text-center text-slate-400 font-sans font-medium">
+              No trials logged yet. Press <strong>"▶ Start Trial"</strong> to run an experiment.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = trialLogs.map(row => {
+        const badgeClass = row.crashed
+          ? 'bg-rose-100 text-rose-800 border-rose-300'
+          : 'bg-emerald-100 text-emerald-800 border-emerald-300';
+        return `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="py-2 px-2.5 font-extrabold text-slate-900">#${row.trial}</td>
+            <td class="py-2 px-2.5">${row.plants} 🌿</td>
+            <td class="py-2 px-2.5">${row.fish} 🐟</td>
+            <td class="py-2 px-2.5 font-sans font-semibold text-slate-700">${row.lightMode}</td>
+            <td class="py-2 px-2.5">${row.hours}</td>
+            <td class="py-2 px-2.5 font-extrabold text-blue-700">${row.o2}</td>
+            <td class="py-2 px-2.5 font-extrabold text-orange-600">${row.co2}</td>
+            <td class="py-2 px-2.5 font-sans">
+              <span class="px-2 py-0.5 rounded-md border text-[11px] font-bold ${badgeClass}">
+                ${row.result}
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Initialize Simulator on Window Load
+    window.addEventListener('resize', () => {
+      drawGraph();
+    });
+
+    window.onload = function () {
+      updateLightButtonsUI();
+      setupGraphHoverEvents();
+      resetCurrentTrialState(false);
+    };
+  </script>
+</body>
+</html>
