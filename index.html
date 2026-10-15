@@ -295,6 +295,10 @@
               <stop offset="0%" stop-color="#fde047" stop-opacity="0.55" />
               <stop offset="100%" stop-color="#fde047" stop-opacity="0.0" />
             </linearGradient>
+            <!-- Strict ClipPath Matching the Sealed Glass Bio-Dome Interior -->
+            <clipPath id="domeClip">
+              <path d="M64,280 C32,218 38,56 204,36 L256,36 C422,56 428,218 396,280 Z" />
+            </clipPath>
           </defs>
 
           <!-- Sky Background -->
@@ -315,43 +319,44 @@
             <circle cx="82" cy="46" r="22" fill="#facc15" stroke="#eab308" stroke-width="3" />
           </g>
 
+          <!-- Clipped Interior Contents of Sealed Bio-Dome -->
+          <g clip-path="url(#domeClip)">
+            <!-- Water Inside Sealed Bio-Dome -->
+            <rect id="domeWaterPath" x="30" y="102" width="400" height="185" fill="url(#dayWater)" />
+
+            <!-- Water Surface Line (Fitted to exact dome width at y=102) -->
+            <ellipse cx="230" cy="102" rx="156" ry="5.5" fill="#bae6fd" fill-opacity="0.55" stroke="#38bdf8" stroke-width="1.5" />
+
+            <!-- Dynamic Plants Group -->
+            <g id="domePlantsGroup"></g>
+
+            <!-- Dynamic Swimming Fish Group -->
+            <g id="domeFishGroup"></g>
+
+            <!-- Dynamic Labeled Gas Bubbles Group (O₂ & CO₂) -->
+            <g id="domeBubblesGroup"></g>
+
+            <!-- Gravel Bed at Bottom -->
+            <path d="M50,265 Q230,257 410,265 L410,290 L50,290 Z" fill="#64748b" stroke="#475569" stroke-width="2" />
+            <g fill="#94a3b8">
+              <ellipse cx="115" cy="274" rx="14" ry="4" />
+              <ellipse cx="185" cy="277" rx="18" ry="4" />
+              <ellipse cx="255" cy="273" rx="15" ry="4" />
+              <ellipse cx="330" cy="276" rx="16" ry="4" />
+            </g>
+          </g>
+
+          <!-- Glass Bio-Dome Outline (Drawn over clipped interior for crisp walls) -->
+          <path d="M64,280 C32,218 38,56 204,36 L256,36 C422,56 428,218 396,280 Z"
+            fill="none" stroke="#475569" stroke-width="5" stroke-linejoin="round" />
+          <!-- Glass Highlight -->
+          <path d="M78,242 C58,188 66,82 190,50"
+            fill="none" stroke="#ffffff" stroke-width="3.5" stroke-opacity="0.5" stroke-linecap="round" />
+
           <!-- Sealed Top Stopper & Neck -->
           <rect x="204" y="18" width="52" height="22" rx="4" fill="#475569" stroke="#334155" stroke-width="2" />
           <rect x="196" y="10" width="68" height="10" rx="4" fill="#334155" />
           <text x="230" y="29" fill="#f8fafc" font-size="8.5" font-weight="bold" text-anchor="middle">SEALED</text>
-
-          <!-- Water Inside Sealed Bio-Dome -->
-          <path id="domeWaterPath"
-            d="M54,102 L406,102 C416,162 416,232 396,272 L64,272 C44,232 44,162 54,102 Z"
-            fill="url(#dayWater)" />
-
-          <!-- Water Surface Line -->
-          <ellipse cx="230" cy="102" rx="176" ry="6" fill="#bae6fd" fill-opacity="0.55" stroke="#38bdf8" stroke-width="1.5" />
-
-          <!-- Dynamic Plants Group -->
-          <g id="domePlantsGroup"></g>
-
-          <!-- Dynamic Swimming Fish Group -->
-          <g id="domeFishGroup"></g>
-
-          <!-- Dynamic Labeled Gas Bubbles Group (O₂ & CO₂) -->
-          <g id="domeBubblesGroup"></g>
-
-          <!-- Gravel Bed at Bottom -->
-          <path d="M60,265 Q230,257 400,265 L394,284 Q230,290 66,284 Z" fill="#64748b" stroke="#475569" stroke-width="2" />
-          <g fill="#94a3b8">
-            <ellipse cx="115" cy="274" rx="14" ry="4" />
-            <ellipse cx="185" cy="277" rx="18" ry="4" />
-            <ellipse cx="255" cy="273" rx="15" ry="4" />
-            <ellipse cx="330" cy="276" rx="16" ry="4" />
-          </g>
-
-          <!-- Glass Bio-Dome Outline -->
-          <path d="M64,280 C32,218 38,56 204,36 L256,36 C422,56 428,218 396,280 Z"
-            fill="none" stroke="#475569" stroke-width="5" />
-          <!-- Glass Highlight -->
-          <path d="M78,242 C58,188 66,82 190,50"
-            fill="none" stroke="#ffffff" stroke-width="3.5" stroke-opacity="0.5" stroke-linecap="round" />
 
           <!-- Always Dark Cover Label (Visible when Always Dark is selected) -->
           <g id="alwaysDarkCoverBadge" opacity="0">
